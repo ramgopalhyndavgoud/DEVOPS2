@@ -41,8 +41,29 @@ jobs:
       - name: Deploy to DigitalOcean
         run: |
           sshpass -p ${{ secrets.SSH_PASSWORD }} ssh -o StrictHostKeyChecking=no root@139.59.47.63 << 'EOF'
+            # Pull the latest Docker image
             docker pull ramgopalhyndav/my-node-app:latest
-            docker stop $(docker ps -q --filter "ancestor=ramgopalhyndav/my-node-app:latest") || true
-            docker rm $(docker ps -a -q --filter "ancestor=ramgopalhyndav/my-node-app:latest") || true
-            docker run -d -p 80:3000 ramgopalhyndav/my-node-app:latest
+            
+            # Stop and remove existing containers based on the image
+            CONTAINERS=$(docker ps -q --filter "ancestor=ramgopalhyndav/my-node-app:latest")
+            if [ -n "$CONTAINERS" ]; then
+              docker stop $CONTAINERS
+              docker rm $CONTAINERS
+            fi
+            
+            # Remove old containers if any
+            OLD_CONTAINERS=$(docker ps -a -q --filter "ancestor=ramgopalhyndav/my-node-app:latest")
+            if [ -n "$OLD_CONTAINERS" ]; then
+              docker rm $OLD_CONTAINERS
+            fi
+            
+            # Check if port 80 is in use and use an alternative port if necessary
+            if docker ps --format '{{.Ports}}' | grep -q '80->'; then
+              PORT=8080
+            else
+              PORT=80
+            fi
+            
+            # Run the new container
+            docker run -d -p $PORT:3000 ramgopalhyndav/my-node-app:latest
           EOF
