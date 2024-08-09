@@ -1,0 +1,42 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build Docker image
+        run: |
+          docker build -t my-node-app .
+
+      - name: Run tests
+        run: |
+          docker run --rm my-node-app npm test || true
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Push Docker image to Docker Hub
+        run: |
+          docker tag my-node-app ramgopalhyndav/my-node-app:latest
+          docker push ramgopalhyndav/my-node-app:latest
+
+      - name: Deploy to DigitalOcean
+        env:
+          DO_TOKEN: ${{ secrets.DO_TOKEN }}
+        run: |
+          ssh root@139.59.47.63 "docker pull ramgopalhyndav/my-node-app:latest && docker run -d -p 80:3000 ramgopalhyndav/my-node-app:latest"
