@@ -39,4 +39,9 @@ jobs:
         env:
           DO_TOKEN: ${{ secrets.DO_TOKEN }}
         run: |
-          ssh root@139.59.47.63 "docker pull ramgopalhyndav/my-node-app:latest && docker run -d -p 80:3000 ramgopalhyndav/my-node-app:latest"
+          ssh -o StrictHostKeyChecking=no root@139.59.47.63 << 'EOF'
+            docker pull ramgopalhyndav/my-node-app:latest
+            docker stop $(docker ps -q --filter "ancestor=ramgopalhyndav/my-node-app:latest") || true
+            docker rm $(docker ps -a -q --filter "ancestor=ramgopalhyndav/my-node-app:latest") || true
+            docker run -d -p 80:3000 ramgopalhyndav/my-node-app:latest
+          EOF
